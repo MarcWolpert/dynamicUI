@@ -8,56 +8,84 @@ import {
 } from './lib/menuTab.js';
 import { appendContact, addContactEventListener } from './lib/contactTab.js';
 
-const dropdown = (id) => {
-	const dropdown = document.createElement('div');
-	dropdown.id = id;
-	dropdown.classList.add('dropdown');
-	const createButton = (text) => {
-		const button = document.createElement('button');
-		button.textContent = text;
-		return button;
-	};
-	const buttonCount = 10;
-	const buttons = [];
-	for (let i = 0; i < buttonCount; i += 1) {
-		const button = createButton(`Button ${i}`);
-		button.style.textAlign = 'center';
-		button.style.flexGrow = 1;
-		buttons.push(button);
+class Dropdown {
+	constructor(id, options, onSelect) {
+		this.id = id;
+		this.options = options;
+		this.onSelect = onSelect;
+		this.maxWidth = Math.max(...options.map((option) => option.length));
+		this.length = options.length;
+		this.dropdownElement = this.createDropdown();
 	}
-	for (let i = 0; i < buttons.length; i += 1) {
-		dropdown.appendChild(buttons[i]);
-	}
-	dropdown.style.height = buttonCount * 2 + 'rem';
-	return dropdown;
-};
 
-const dropdownOnClick = (elementId, dropdownID) => {
-	let currentClick = { x: 0, y: 0 };
-	const dropdownElement = dropdown(dropdownID);
-	elementId.addEventListener('click', (e) => {
-		console.log(e.clientX, e.clientY);
-		currentClick.x = e.clientX;
-		currentClick.y = e.clientY;
-		dropdownElement.style.position = 'absolute';
-		dropdownElement.style.left = currentClick.x + 'px';
-		dropdownElement.style.top = currentClick.y + 'px';
-		dropdownElement.style.zIndex = 1;
-		elementId.appendChild(dropdownElement);
+	createDropdown() {
+		const dropdown = document.createElement('div');
+		dropdown.id = this.id;
+		dropdown.classList.add('dropdown');
+		dropdown.style.height = `${this.length}rem`;
+		dropdown.style.width = `calc(${this.maxWidth}ch + 2rem)`;
+
+		dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+		this.options.forEach((option) => {
+			const button = document.createElement('button');
+			button.textContent = option;
+			button.style.textAlign = 'center';
+			button.style.alignSelf = 'center';
+			button.style.width = `${option.length}ch`;
+			button.addEventListener('click', () =>
+				this.handleOptionSelect(option),
+			);
+			dropdown.appendChild(button);
+		});
+		return dropdown;
+	}
+
+	show(x, y) {
+		this.hide(); // Ensure only one dropdown is visible
+		this.dropdownElement.style.position = 'absolute';
+		this.dropdownElement.style.left = `${x}px`;
+		this.dropdownElement.style.top = `${y}px`;
+		this.dropdownElement.style.zIndex = '1';
+		document.body.appendChild(this.dropdownElement);
+	}
+
+	hide() {
+		if (this.dropdownElement.parentElement) {
+			this.dropdownElement.parentElement.removeChild(
+				this.dropdownElement,
+			);
+		}
+	}
+
+	handleOptionSelect(option) {
+		if (typeof this.onSelect === 'function') {
+			this.onSelect(option);
+		}
+		this.hide();
+	}
+}
+
+const menuOptions = ['Home', 'Menu', 'Contact', 'About', 'Gallery', 'Events'];
+
+function handleOptionSelected(option) {
+	console.log(`Selected option: ${option}`);
+	// Implement your navigation logic here
+}
+
+const dropdown = new Dropdown('dropdown01', menuOptions, handleOptionSelected);
+
+const optionElements = document.getElementsByClassName('options');
+Array.from(optionElements).forEach((element) => {
+	element.addEventListener('click', (e) => {
+		e.stopPropagation();
+		const rect = element.getBoundingClientRect();
+		const x = rect.left;
+		const y = rect.bottom;
+		dropdown.show(x, y);
 	});
-	console.log('dropdownElement', dropdownElement);
-	return dropdownElement;
-};
+});
 
-const card01 = document.getElementById('card01');
-const dropdown01 = dropdownOnClick(card01, 'dropdown01');
-
-//add body event listener to remove dropdown
-const body = document.getElementsByTagName('body')[0];
-body.addEventListener('click', (e) => {
-	if (e.target !== dropdown01) {
-		//remove dropdown01 from the DOM
-		console.log('removing dropdown01');
-		card01.removeChild(dropdown01);
-	}
+document.addEventListener('click', () => {
+	dropdown.hide();
 });
